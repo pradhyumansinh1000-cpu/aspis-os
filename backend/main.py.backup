@@ -1,0 +1,420 @@
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+import models
+import ocr
+import ai_engine
+import correlation_engine
+from database import engine, get_db
+
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="ASPIS OS API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Pydantic Schemas
+class ArtsRecordBase(BaseModel):
+    studentId: str
+    primaryDiscipline: str
+    clubParticipation: str
+    creativityScore: int
+    techniqueScore: int
+    expressionScore: int
+    notes: str
+    updatedBy: str
+
+class ArtsRecordCreate(ArtsRecordBase):
+    pass
+
+class ArtsRecordUpdate(BaseModel):
+    primaryDiscipline: Optional[str] = None
+    clubParticipation: Optional[str] = None
+    creativityScore: Optional[int] = None
+    techniqueScore: Optional[int] = None
+    expressionScore: Optional[int] = None
+    notes: Optional[str] = None
+    updatedBy: Optional[str] = None
+
+class MedicalRecordBase(BaseModel):
+    studentId: str
+    height: str
+    weight: str
+    bloodGroup: str
+    visionLeft: str
+    visionRight: str
+    bmi: str
+    healthStatus: str
+    notes: str
+
+class LibraryRecordBase(BaseModel):
+    studentId: str
+    currentlyBorrowed: str
+    overdueCount: int
+    favoriteGenres: str
+    notes: str
+
+class SportsRecordBase(BaseModel):
+    studentId: str
+    primarySport: str
+    teamParticipation: str
+    staminaScore: int
+    strengthScore: int
+    agilityScore: int
+    notes: str
+
+# Routes
+@app.get("/api/arts")
+def get_arts_records(db: Session = Depends(get_db)):
+    records = db.query(models.ArtsRecord).all()
+    # Format to match frontend dict expectation
+    result = {}
+    for r in records:
+        result[r.student_id] = {
+            "studentId": r.student_id,
+            "primaryDiscipline": r.primary_discipline,
+            "clubParticipation": r.club_participation,
+            "creativityScore": r.creativity_score,
+            "techniqueScore": r.technique_score,
+            "expressionScore": r.expression_score,
+            "notes": r.notes,
+            "updatedBy": "K. Rao",
+            "updatedAt": r.updated_at.isoformat() if r.updated_at else "",
+            "portfolioLogs": [] # Simplified for phase 2
+        }
+    return result
+
+@app.post("/api/arts/{student_id}")
+def update_arts_record(student_id: str, record: dict, db: Session = Depends(get_db)):
+    db_record = db.query(models.ArtsRecord).filter(models.ArtsRecord.student_id == student_id).first()
+    if not db_record:
+        db_record = models.ArtsRecord(
+            student_id=student_id,
+            primary_discipline=record.get("primaryDiscipline", "Visual Arts"),
+            club_participation=record.get("clubParticipation", "None"),
+            creativity_score=record.get("creativityScore", 50),
+            technique_score=record.get("techniqueScore", 50),
+            expression_score=record.get("expressionScore", 50),
+            notes=record.get("notes", "")
+        )
+        db.add(db_record)
+    else:
+        db_record.primary_discipline = record.get("primaryDiscipline", db_record.primary_discipline)
+        db_record.club_participation = record.get("clubParticipation", db_record.club_participation)
+        db_record.creativity_score = record.get("creativityScore", db_record.creativity_score)
+        db_record.technique_score = record.get("techniqueScore", db_record.technique_score)
+        db_record.expression_score = record.get("expressionScore", db_record.expression_score)
+        db_record.notes = record.get("notes", db_record.notes)
+    
+    db.commit()
+    return {"status": "success"}
+
+@app.get("/api/medical")
+def get_medical_records(db: Session = Depends(get_db)):
+    records = db.query(models.MedicalRecord).all()
+    result = {}
+    for r in records:
+        result[r.student_id] = {
+            "studentId": r.student_id,
+            "height": r.height,
+            "weight": r.weight,
+            "bloodGroup": r.blood_group,
+            "visionLeft": r.vision_left,
+            "visionRight": r.vision_right,
+            "bmi": r.bmi,
+            "healthStatus": r.health_status,
+            "notes": r.notes,
+            "updatedAt": r.updated_at.isoformat() if r.updated_at else "",
+            "updatedBy": "Dr. A. Mehta"
+        }
+    return result
+
+@app.post("/api/medical/{student_id}")
+def update_medical_record(student_id: str, record: dict, db: Session = Depends(get_db)):
+    db_record = db.query(models.MedicalRecord).filter(models.MedicalRecord.student_id == student_id).first()
+    if not db_record:
+        db_record = models.MedicalRecord(student_id=student_id)
+        db.add(db_record)
+    
+    db_record.height = record.get("height", db_record.height)
+    db_record.weight = record.get("weight", db_record.weight)
+    db_record.blood_group = record.get("bloodGroup", db_record.blood_group)
+    db_record.vision_left = record.get("visionLeft", db_record.vision_left)
+    db_record.vision_right = record.get("visionRight", db_record.vision_right)
+    db_record.bmi = record.get("bmi", db_record.bmi)
+    db_record.health_status = record.get("healthStatus", db_record.health_status)
+    db_record.notes = record.get("notes", db_record.notes)
+    
+    db.commit()
+    return {"status": "success"}
+
+@app.get("/api/sports")
+def get_sports_records(db: Session = Depends(get_db)):
+    records = db.query(models.SportsRecord).all()
+    result = {}
+    for r in records:
+        result[r.student_id] = {
+            "studentId": r.student_id,
+            "primarySport": r.primary_sport,
+            "teamParticipation": r.team_participation,
+            "staminaScore": r.stamina_score,
+            "strengthScore": r.strength_score,
+            "agilityScore": r.agility_score,
+            "notes": r.notes,
+            "fitnessLogs": [],
+            "updatedAt": r.updated_at.isoformat() if r.updated_at else "",
+            "updatedBy": "Coach V. Singh"
+        }
+    return result
+
+@app.post("/api/sports/{student_id}")
+def update_sports_record(student_id: str, record: dict, db: Session = Depends(get_db)):
+    db_record = db.query(models.SportsRecord).filter(models.SportsRecord.student_id == student_id).first()
+    if not db_record:
+        db_record = models.SportsRecord(student_id=student_id)
+        db.add(db_record)
+    
+    db_record.primary_sport = record.get("primarySport", db_record.primary_sport)
+    db_record.team_participation = record.get("teamParticipation", db_record.team_participation)
+    db_record.stamina_score = record.get("staminaScore", db_record.stamina_score)
+    db_record.strength_score = record.get("strengthScore", db_record.strength_score)
+    db_record.agility_score = record.get("agilityScore", db_record.agility_score)
+    db_record.notes = record.get("notes", db_record.notes)
+    
+    db.commit()
+    return {"status": "success"}
+
+@app.get("/api/library")
+def get_library_records(db: Session = Depends(get_db)):
+    records = db.query(models.LibraryRecord).all()
+    result = {}
+    for r in records:
+        result[r.student_id] = {
+            "studentId": r.student_id,
+            "currentlyBorrowed": r.currently_borrowed,
+            "overdueCount": r.overdue_count,
+            "favoriteGenres": r.favorite_genres,
+            "notes": r.notes,
+            "borrowHistory": [],
+            "readingLevel": "age_appropriate",
+            "readingSpeed": "average",
+            "aiRecommendation": "",
+            "lastVisitDate": r.updated_at.isoformat() if r.updated_at else "",
+            "updatedBy": "Librarian M. Desai",
+            "updatedAt": r.updated_at.isoformat() if r.updated_at else ""
+        }
+    return result
+
+@app.post("/api/library/{student_id}")
+def update_library_record(student_id: str, record: dict, db: Session = Depends(get_db)):
+    db_record = db.query(models.LibraryRecord).filter(models.LibraryRecord.student_id == student_id).first()
+    if not db_record:
+        db_record = models.LibraryRecord(student_id=student_id)
+        db.add(db_record)
+    
+    db_record.currently_borrowed = record.get("currentlyBorrowed", db_record.currently_borrowed)
+    db_record.overdue_count = record.get("overdueCount", db_record.overdue_count)
+    db_record.favorite_genres = record.get("favoriteGenres", db_record.favorite_genres)
+    db_record.notes = record.get("notes", db_record.notes)
+    
+    db.commit()
+    return {"status": "success"}
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok"}
+
+def async_db_persist(student_id: str, ocr_data: dict):
+    # Simulated Celery worker task that writes OCR output to DB asynchronously
+    print(f"[CELERY_SIMULATION] Background worker persisted OCR data for {student_id}")
+
+@app.post("/api/exams/upload")
+def upload_exam(student_id: str, background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    """
+    Simulates dispatching a Vision OCR task to a Celery worker.
+    """
+    result = ocr.process_exam_image(file.filename, student_id)
+    background_tasks.add_task(async_db_persist, student_id, result)
+    return result
+
+@app.post("/api/intelligence/index")
+def index_all_data(db: Session = Depends(get_db)):
+    medical = db.query(models.MedicalRecord).all()
+    library = db.query(models.LibraryRecord).all()
+    sports = db.query(models.SportsRecord).all()
+    arts = db.query(models.ArtsRecord).all()
+    
+    for r in medical:
+        ai_engine.index_document(r.student_id, "Medical", f"Health Status: {r.health_status}. BMI: {r.bmi}. Notes: {r.notes}", {"type": "health"})
+    for r in library:
+        ai_engine.index_document(r.student_id, "Library", f"Favorite Genres: {r.favorite_genres}. Notes: {r.notes}", {"type": "reading"})
+    for r in sports:
+        ai_engine.index_document(r.student_id, "Sports", f"Primary Sport: {r.primary_sport}. Notes: {r.notes}", {"type": "athletics"})
+    for r in arts:
+        ai_engine.index_document(r.student_id, "Extracurriculars", f"Discipline: {r.primary_discipline}. Notes: {r.notes}", {"type": "arts"})
+        
+    return {"status": "indexed", "total_vectors": len(medical) + len(library) + len(sports) + len(arts)}
+
+@app.get("/api/intelligence/search")
+def search_intelligence(q: str):
+    results = ai_engine.semantic_search(q)
+    llm_summary = f"Based on the semantic search for '{q}', the system found cross-departmental correlations in the retrieved records. This indicates multi-disciplinary context."
+    return {
+        "query": q,
+        "llm_synthesis": llm_summary,
+        "hits": results
+    }
+
+@app.get("/api/intelligence/student/{student_id}")
+def get_student_intelligence(student_id: str, db: Session = Depends(get_db)):
+    # ... (existing code for student intelligence)
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+        
+    medical = db.query(models.MedicalRecord).filter(models.MedicalRecord.student_id == student_id).first()
+    sports = db.query(models.SportsRecord).filter(models.SportsRecord.student_id == student_id).first()
+    arts = db.query(models.ArtsRecord).filter(models.ArtsRecord.student_id == student_id).first()
+    library = db.query(models.LibraryRecord).filter(models.LibraryRecord.student_id == student_id).first()
+    
+    context = {
+        "student": {"name": student.name, "grade": student.grade, "section": student.section},
+        "medical": {"bmi": medical.bmi, "health": medical.health_status, "notes": medical.notes} if medical else {},
+        "sports": {"primary": sports.primary_sport, "stamina": sports.stamina_score, "notes": sports.notes} if sports else {},
+        "arts": {"discipline": arts.primary_discipline, "creativity": arts.creativity_score, "notes": arts.notes} if arts else {},
+        "library": {"favorite_genres": library.favorite_genres, "overdue": library.overdue_count, "notes": library.notes} if library else {}
+    }
+    
+    report = ai_engine.generate_student_intelligence_report(context)
+    return {
+        "student_id": student_id,
+        "llm_report": report
+    }
+
+@app.post("/api/intelligence/class-action-report")
+def get_class_action_report(class_data: dict):
+    report = ai_engine.generate_class_action_report(class_data)
+    return {"report": report}
+
+@app.post("/api/intelligence/teacher-alerts")
+def get_teacher_alerts(class_data: dict):
+    alerts = ai_engine.generate_teacher_alerts(class_data)
+    return {"alerts": alerts}
+
+@app.post("/api/assessments/log")
+def log_assessment(data: dict, db: Session = Depends(get_db)):
+    """Logs the final topic-wise scores for all students in an assessment."""
+    import uuid
+    assessment_id = data.get("id", str(uuid.uuid4()))
+    
+    # Create Assessment
+    db_assessment = db.query(models.Assessment).filter(models.Assessment.id == assessment_id).first()
+    if not db_assessment:
+        db_assessment = models.Assessment(
+            id=assessment_id,
+            title=data.get("title"),
+            subject=data.get("subject"),
+            date=data.get("date")
+        )
+        db.add(db_assessment)
+    
+    # Log Scores
+    questions = data.get("questions", [])
+    scores = data.get("scores", [])
+    
+    for s in scores:
+        student_id = s.get("studentId")
+        q_scores = s.get("questionScores", {})
+        for q in questions:
+            q_id = q.get("id")
+            topic = q.get("mappedConcept")
+            max_marks = q.get("maxMarks")
+            awarded = q_scores.get(q_id, 0)
+            
+            # Upsert
+            db_score = db.query(models.AssessmentScore).filter(
+                models.AssessmentScore.assessment_id == assessment_id,
+                models.AssessmentScore.student_id == student_id,
+                models.AssessmentScore.topic == topic
+            ).first()
+            if db_score:
+                db_score.score = awarded
+                db_score.max_score = max_marks
+            else:
+                db_score = models.AssessmentScore(
+                    assessment_id=assessment_id,
+                    student_id=student_id,
+                    topic=topic,
+                    score=awarded,
+                    max_score=max_marks
+                )
+                db.add(db_score)
+    db.commit()
+    return {"status": "success"}
+
+@app.get("/api/intelligence/forecast/{student_id}")
+def get_student_forecast(student_id: str, db: Session = Depends(get_db)):
+    """Calculate basic longitudinal risk forecast based on past topic scores."""
+    scores = db.query(models.AssessmentScore).filter(models.AssessmentScore.student_id == student_id).all()
+    
+    # Aggregate scores by topic
+    topic_data = {}
+    for s in scores:
+        if s.topic not in topic_data:
+            topic_data[s.topic] = []
+        # Convert to percentage
+        pct = (s.score / s.max_score * 100) if s.max_score > 0 else 0
+        topic_data[s.topic].append(pct)
+        
+    forecasts = []
+    for topic, history in topic_data.items():
+        if len(history) >= 2:
+            # Simple linear trajectory for forecast
+            trend = history[-1] - history[0]
+            predicted = min(100, max(0, history[-1] + (trend / len(history))))
+            forecasts.append({
+                "topic": topic,
+                "history": history,
+                "predicted": round(predicted, 1),
+                "risk": "critical" if predicted < 40 else "high" if predicted < 60 else "low"
+            })
+        else:
+             forecasts.append({
+                "topic": topic,
+                "history": history,
+                "predicted": round(history[0], 1) if history else 0,
+                "risk": "low" if (history and history[0] >= 60) else "high"
+            })
+    return {"forecasts": forecasts}
+
+@app.post("/api/cron/run-risk-detection")
+def run_risk_detection(db: Session = Depends(get_db)):
+    """
+    Simulates a nightly cron job that cross-references all departmental data
+    and generates predictive risk flags using Scikit-Learn Isolation Forests.
+    """
+    students = db.query(models.Student).all()
+    medical = db.query(models.MedicalRecord).all()
+    library = db.query(models.LibraryRecord).all()
+    sports = db.query(models.SportsRecord).all()
+    arts = db.query(models.ArtsRecord).all()
+    
+    # ML DataFrame aggregation
+    df = correlation_engine.build_correlation_dataframe(students, medical, library, sports, arts)
+    
+    # Run predictive risk model
+    generated_flags = correlation_engine.run_predictive_risk_model(df)
+    
+    return {
+        "status": "cron_executed",
+        "timestamp": "2026-05-28T03:00:00Z",
+        "generated_flags": generated_flags
+    }

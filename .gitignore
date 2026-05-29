@@ -1,0 +1,22 @@
+# Python / Backend
+venv/
+__pycache__/
+*.pyc
+.env
+*.sqlite
+*.db
+backend/qdrant_storage/
+
+# Node.js / Frontend
+node_modules/
+.next/
+out/
+build/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS
+.DS_Store
+Thumbs.db
