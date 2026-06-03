@@ -225,7 +225,7 @@ export default function Assessments() {
 
     try {
       setUploadStep(2);
-      const res = await fetch("http://localhost:8000/api/exams/upload?student_id=schema", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/exams/upload?student_id=schema", {
         method: "POST",
         body: formData
       });
@@ -385,7 +385,7 @@ export default function Assessments() {
     };
 
     try {
-      await fetch("http://localhost:8000/api/assessments/log", {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/assessments/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newAssessment)

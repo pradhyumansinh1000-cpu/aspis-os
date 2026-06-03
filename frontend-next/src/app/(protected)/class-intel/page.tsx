@@ -29,7 +29,7 @@ export default function ClassIntelligence() {
     if (!query.trim()) return;
     setIsSearching(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/intelligence/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/intelligence/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       setResults(data);
     } catch (err) {
@@ -52,7 +52,7 @@ export default function ClassIntelligence() {
   const getStudentName = (id: string) => STUDENTS.find(s => s.id === id)?.name || id;
 
   const handleIndexData = async () => {
-    await fetch("http://localhost:8000/api/intelligence/index", { method: "POST" });
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/intelligence/index", { method: "POST" });
     alert("System indexed successfully into Qdrant Vector DB.");
   };
 

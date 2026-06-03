@@ -185,7 +185,7 @@ export default function LibraryDashboard() {
   };
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/library")
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/library")
       .then(res => res.json())
       .then(data => {
         const parsed = Object.values(data) as LibraryRecord[];
@@ -193,7 +193,7 @@ export default function LibraryDashboard() {
           setRecords(parsed);
         } else {
           DEMO_DATA.forEach(r => {
-            fetch(`http://localhost:8000/api/library/${r.studentId}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/library/${r.studentId}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(r)
@@ -252,7 +252,7 @@ export default function LibraryDashboard() {
     setRecords(newRecords);
     
     // Save to API
-    fetch(`http://localhost:8000/api/library/${updatedRecord.studentId}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/library/${updatedRecord.studentId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedRecord)

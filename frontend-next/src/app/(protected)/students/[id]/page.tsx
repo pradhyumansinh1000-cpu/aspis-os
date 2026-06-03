@@ -21,7 +21,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     if (llmReport || isLoadingReport) return;
     setIsLoadingReport(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/intelligence/student/${id}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/intelligence/student/${id}`);
       const data = await res.json();
       setLlmReport(data.llm_report);
     } catch (err) {
@@ -41,7 +41,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     const fetchForecasts = async () => {
       setIsLoadingForecasts(true);
       try {
-        const res = await fetch(`http://localhost:8000/api/intelligence/forecast/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/intelligence/forecast/${id}`);
         const data = await res.json();
         setForecasts(data.forecasts || []);
       } catch (err) {
@@ -54,7 +54,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     const fetchMarks = async () => {
       setIsLoadingMarks(true);
       try {
-        const res = await fetch(`http://localhost:8000/api/student/${id}/marks`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/student/${id}/marks`);
         const data = await res.json();
         setAcademicMarks(data.marks || []);
       } catch (err) {

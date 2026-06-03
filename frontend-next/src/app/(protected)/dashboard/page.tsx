@@ -69,7 +69,7 @@ function PrincipalDashboard({ userName }: { userName: string }) {
     const fetchMLRisks = async () => {
       setIsLoadingAlerts(true);
       try {
-        const res = await fetch("http://localhost:8000/api/cron/run-risk-detection", { method: "POST" });
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/cron/run-risk-detection", { method: "POST" });
         const data = await res.json();
         setMlAlerts(data.generated_flags || []);
       } catch (err) {
@@ -393,7 +393,7 @@ function TeacherDashboard({ userName, role }: { userName: string; role: string }
   const fetchActionReport = async () => {
     setIsLoadingReport(true);
     try {
-      const res = await fetch("http://localhost:8000/api/intelligence/class-action-report", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/intelligence/class-action-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -419,7 +419,7 @@ function TeacherDashboard({ userName, role }: { userName: string; role: string }
       if (!userSubject || studentsGraded === 0) return;
       setIsLoadingAlerts(true);
       try {
-        const res = await fetch("http://localhost:8000/api/intelligence/teacher-alerts", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/intelligence/teacher-alerts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

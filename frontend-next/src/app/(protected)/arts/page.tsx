@@ -144,7 +144,7 @@ export default function ArtsDashboard() {
 
   useEffect(() => {
     // Load Arts Records from API
-    fetch("http://localhost:8000/api/arts")
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/arts")
       .then(res => res.json())
       .then(data => {
         if (Object.keys(data).length > 0) {
@@ -154,7 +154,7 @@ export default function ArtsDashboard() {
           DEMO_DATA.forEach(r => {
             initialMap[r.studentId] = r;
             // Seed the backend
-            fetch(`http://localhost:8000/api/arts/${r.studentId}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/arts/${r.studentId}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(r)
@@ -215,7 +215,7 @@ export default function ArtsDashboard() {
     setArtsRecords(newRecords);
     
     // Save to API
-    fetch(`http://localhost:8000/api/arts/${selectedStudentId}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/arts/${selectedStudentId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newRecord)

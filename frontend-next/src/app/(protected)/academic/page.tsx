@@ -38,7 +38,7 @@ export default function AcademicPortal() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`http://localhost:8000/api/exams/upload?student_id=${selectedStudentId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/exams/upload?student_id=${selectedStudentId}`, {
         method: 'POST',
         body: formData
       });

@@ -130,7 +130,7 @@ export default function SportsPage() {
     setIsClient(true);
     
     // Load Sports Data
-    fetch("http://localhost:8000/api/sports")
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/sports")
       .then(res => res.json())
       .then(data => {
         const parsed = Object.values(data) as SportsRecord[];
@@ -142,7 +142,7 @@ export default function SportsPage() {
           const recordsMap: Record<string, SportsRecord> = {};
           DEMO_SPORTS_DATA.forEach(r => {
             recordsMap[r.studentId] = r;
-            fetch(`http://localhost:8000/api/sports/${r.studentId}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/sports/${r.studentId}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(r)
@@ -172,7 +172,7 @@ export default function SportsPage() {
   const saveSportsRecords = (newRecordsMap: Record<string, SportsRecord>, updatedRecord?: SportsRecord) => {
     setSportsRecords(newRecordsMap);
     if (updatedRecord) {
-      fetch(`http://localhost:8000/api/sports/${updatedRecord.studentId}`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/sports/${updatedRecord.studentId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedRecord)

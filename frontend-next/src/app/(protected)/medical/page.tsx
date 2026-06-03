@@ -278,7 +278,7 @@ export default function MedicalDashboard() {
 
   // Load from API on mount
   useEffect(() => {
-    fetch("http://localhost:8000/api/medical")
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}"}` + "/api/medical")
       .then(res => res.json())
       .then(data => {
         const parsed = Object.values(data) as HealthRecord[];
@@ -288,7 +288,7 @@ export default function MedicalDashboard() {
           // Seed demo data
           const seed = generateSeedRecords();
           seed.forEach(r => {
-            fetch(`http://localhost:8000/api/medical/${r.studentId}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/medical/${r.studentId}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(r)
@@ -366,7 +366,7 @@ export default function MedicalDashboard() {
     setRecords(newRecords);
     
     // Save to API
-    fetch(`http://localhost:8000/api/medical/${finalRecord.studentId}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/medical/${finalRecord.studentId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(finalRecord)
